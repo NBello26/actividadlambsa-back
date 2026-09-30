@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: versionamientov2
+
+# El backend es un resource server que ahora valida tokens de DOS proveedores
+# OIDC a la vez. Cada proveedor aporta su JWK Set (llaves publicas) y los valores
+# de "iss" y "aud" que se aceptan. MultiIssuerJwtDecoder elige el decoder segun
+# el "iss" del token y delega la validacion real (firma, audiences, fechas).
+app:
+  security:
+    jwt:
+      providers:
+        # accesos Azure
+        - name: azure
+          jwk-set-uri: https://login.microsoftonline.com/e5372bf0-c5e3-4286-887c-79069f209c1f/discovery/v2.0/keys
+          issuers:
+            - https://login.microsoftonline.com/e5372bf0-c5e3-4286-887c-79069f209c1f/v2.0
+          # Azure usa el Application ID URI como "aud"
+          audiences:
+            - 57750927-6116-478c-a047-d06caa8fcd00
+            - api://57750927-6116-478c-a047-d06caa8fcd00
+            
+        #Acceso AWS Cognito
+        - name: cognito
+          jwk-set-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xjb69iLl0/.well-known/jwks.json
+          issuers:
+            - https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xjb69iLl0
+          # App Client ID del user pool. OJO: en Cognito este valor aparece en el
+          # claim "aud" del ID token, pero en el claim "client_id" del ACCESS token
+          # (por diseno, para que un access token no se pueda usar donde se espera
+          # un ID token). El backend acepta cualquiera de los dos.
+          audiences:
+            - 2gllb9luipdeq2h0k47u8o9uu7
+          # El access token de Cognito no trae claim "roles", asi que sin esto
+          # ningun usuario de Cognito tendria rol. Se aplica SOLO si el token no
+          # trae ninguno: si el usuario pertenece a un grupo de Cognito, manda el
+          # grupo. Con esto /usuario responde 200.
+          default-role: Usuario
